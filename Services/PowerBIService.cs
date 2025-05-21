@@ -2,6 +2,7 @@ using Microsoft.Identity.Web;
 using Microsoft.PowerBI.Api;
 using Microsoft.PowerBI.Api.Models;
 using Microsoft.Rest;
+using Microsoft.Extensions.Options;
 using PowerBIEmbedDemo.Models;
 using System;
 using System.Collections.Generic;
@@ -9,31 +10,41 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace PowerBIEmbedDemo.Services;
 
 public class PowerBIService
 {
-    private readonly IOptions<PowerBISettings> _settings;
-    private readonly IConfiguration _configuration;
+    private readonly PowerBISettings _settings;
     private readonly ITokenAcquisition _tokenAcquisition;
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PowerBIService> _logger;
 
-    public PowerBIService(IOptions<PowerBISettings> settings, IConfiguration configuration, ITokenAcquisition tokenAcquisition, IHttpClientFactory httpClientFactory, ILogger<PowerBIService> logger)
+    public PowerBIService(IOptions<PowerBISettings> settings, ITokenAcquisition tokenAcquisition, ILogger<PowerBIService> logger)
     {
-        _settings = settings;
-        _configuration = configuration;
+        _settings = settings.Value;
         _tokenAcquisition = tokenAcquisition;
-        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
     public async Task<string> GetAccessTokenAsync()
     {
-        var scopes = new[] { $"{_settings.Value.ResourceUrl}/.default" };
-        var result = await _tokenAcquisition.GetAccessTokenForClientAsync(scopes);
-        return result.AccessToken;
+        try
+        {
+            // Get token for Power BI API
+            var token = await _tokenAcquisition.GetAccessTokenForAppAsync("https://analysis.windows.net/.default");
+            return token;
+        }
+        catch (MicrosoftIdentityWebChallengeUserException ex)
+        {
+            _logger.LogError(ex, "Authentication challenge failed");
+            throw new Exception("Authentication challenge failed. Please sign in again.", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error acquiring access token");
+            throw new Exception("Error acquiring access token", ex);
+        }
     }
 
     public async Task<EmbedToken> GetDashboardEmbedTokenAsync()
@@ -122,12 +133,12 @@ public class PowerBIService
         return JsonSerializer.Serialize(config);
     }
     
-    public string GetDashboardId()
+    public string? GetDashboardId()
     {
         return _settings.DashboardId;
     }
-    
-    public string GetGroupId()
+
+    public string? GetGroupId()
     {
         return _settings.GroupId;
     }

@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using PowerBIEmbedDemo.Models;
 using PowerBIEmbedDemo.Services;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,21 +15,22 @@ var configuration = builder.Configuration;
 // Add HTTP client factory
 services.AddHttpClient();
 
-// Add Microsoft Identity Web authentication
+// Add authentication with Microsoft Identity Web
 services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"));
+    .AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"))
+    .EnableTokenAcquisitionToCallDownstreamApi()
+    .AddInMemoryTokenCaches();
 
-// Add Microsoft Identity UI and token acquisition
+// Add Microsoft Identity consent handler
+services.AddServerSideBlazor()
+    .AddMicrosoftIdentityConsentHandler();
+
+// Add Microsoft Identity UI
 services.AddControllersWithViews()
     .AddMicrosoftIdentityUI();
 
 services.AddRazorPages()
     .AddMicrosoftIdentityUI();
-
-// Add Microsoft Identity Web token acquisition
-services.AddMicrosoftIdentityWebAppAuthentication(configuration, "AzureAd")
-    .EnableTokenAcquisitionToCallDownstreamApi()
-    .AddInMemoryTokenCaches();
 
 // Add HTTP context accessor
 services.AddHttpContextAccessor();
@@ -38,6 +41,7 @@ services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 
 // Register PowerBIService
@@ -46,19 +50,19 @@ services.AddScoped<PowerBIService>();
 // Configure PowerBISettings from appsettings.json
 services.Configure<PowerBISettings>(configuration.GetSection("PowerBI"));
 
-// Add session state for storing tokens
-services.AddSession(options =>
-{
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
-});
-
 // Add application services
-services.AddHttpContextAccessor();
 services.AddRazorPages();
-services.AddServerSideBlazor();
 services.AddControllersWithViews();
+
+// Add HTTP client factory
+services.AddHttpClient();
+
+// Add logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+// Add distributed memory cache (used by the token cache)
+services.AddDistributedMemoryCache();
 
 var app = builder.Build();
 
@@ -86,7 +90,8 @@ app.UseAuthorization();
 // Map endpoints
 app.MapRazorPages();
 app.MapControllers();
-app.MapBlazorHub();
-app.MapFallbackToPage("/_Host");
+
+// Fallback to the main page
+app.MapFallbackToPage("/Index");
 
 app.Run();

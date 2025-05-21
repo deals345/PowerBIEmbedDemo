@@ -32,8 +32,8 @@ public class IndexModel : PageModel
             _logger.LogInformation("Starting to load Power BI dashboard...");
             
             // Get the dashboard details
-            var dashboardId = _powerBIService.GetDashboardId();
-            var groupId = _powerBIService.GetGroupId();
+            var dashboardId = _powerBIService.GetDashboardId() ?? throw new InvalidOperationException("Dashboard ID is not configured");
+            var groupId = _powerBIService.GetGroupId() ?? throw new InvalidOperationException("Group ID is not configured");
             var embedUrl = $"https://app.powerbi.com/dashboardEmbed?dashboardId={dashboardId}&groupId={groupId}";
             
             _logger.LogInformation("Getting embed token...");
@@ -70,6 +70,11 @@ public class IndexModel : PageModel
                 groupId = groupId
             };
             
+            if (embedToken.Token == null)
+            {
+                throw new InvalidOperationException("Failed to get a valid embed token");
+            }
+
             ViewModel = new DashboardViewModel
             {
                 ThumbnailUrl = thumbnailUrl,
@@ -77,11 +82,11 @@ public class IndexModel : PageModel
                 { 
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                     WriteIndented = false
-                }),
+                }) ?? string.Empty,
                 DashboardId = dashboardId,
                 GroupId = groupId,
                 EmbedUrl = embedUrl,
-                Token = embedToken.Token,
+                Token = embedToken.Token ?? string.Empty,
                 IsLoaded = true
             };
 
