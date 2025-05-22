@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PowerBIEmbedDemo")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+36df628fd6f7afe5cdeffc42b050bc8f4c31edd5")]
 [assembly: System.Reflection.AssemblyProductAttribute("PowerBIEmbedDemo")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PowerBIEmbedDemo")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
