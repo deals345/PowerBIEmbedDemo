@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using PowerBIEmbedDemo.Models;
 using PowerBIEmbedDemo.Services;
+using Microsoft.Extensions.Logging;
+using System;
 
 namespace PowerBIEmbedDemo.Controllers
 {
@@ -9,12 +9,12 @@ namespace PowerBIEmbedDemo.Controllers
     [Route("api/[controller]")]
     public class EmbedController : ControllerBase
     {
-        private readonly IOptions<PowerBISettings> _powerBISettings;
+        private readonly PowerBIService _powerBIService;
         private readonly ILogger<EmbedController> _logger;
 
-        public EmbedController(IOptions<PowerBISettings> powerBISettings, ILogger<EmbedController> logger)
+        public EmbedController(PowerBIService powerBIService, ILogger<EmbedController> logger)
         {
-            _powerBISettings = powerBISettings;
+            _powerBIService = powerBIService;
             _logger = logger;
         }
 
@@ -23,34 +23,14 @@ namespace PowerBIEmbedDemo.Controllers
         {
             try
             {
-                var settings = _powerBISettings.Value;
+                // Log that we are about to get the config from the service
+                _logger.LogInformation("Attempting to retrieve embed configuration from PowerBIService.");
+
+                string jsonConfig = _powerBIService.GetEmbedConfig();
                 
-                // Log the settings being used
-                _logger.LogInformation($"Using Power BI settings - ReportId: {settings.ReportId}, GroupId: {settings.GroupId}");
-                
-                // Construct the embed URL with the report ID and group ID
-                var embedUrl = $"{settings.EmbedUrl}?reportId={settings.ReportId}&groupId={settings.GroupId}";
-                
-                var embedConfig = new EmbedConfig
-                {
-                    Type = "report",
-                    EmbedUrl = embedUrl,
-                    ReportId = settings.ReportId,
-                    GroupId = settings.GroupId,
-                    Settings = new 
-                    {
-                        panes = new 
-                        {
-                            filters = new { expanded = false, visible = false },
-                            pageNavigation = new { visible = true }
-                        },
-                        background = "transparent",
-                        layoutType = "custom"
-                    }
-                };
-                
-                _logger.LogInformation($"Generated embed URL: {embedUrl}");
-                return Ok(embedConfig);
+                // Log successful retrieval
+                _logger.LogInformation("Successfully retrieved embed configuration from PowerBIService.");
+                return Content(jsonConfig, "application/json");
             }
             catch (Exception ex)
             {
